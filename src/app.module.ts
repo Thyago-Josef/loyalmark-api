@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { OfferModule } from './offer/offer.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Offer } from './offer/entities/offer.entity';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [TypeOrmModule.forRoot({
@@ -15,7 +17,7 @@ import { Offer } from './offer/entities/offer.entity';
     database: 'loyalmark_db',
     entities: [Offer],
     synchronize: true, // Isso cria as tabelas automaticamente
-  }), OfferModule],
+  }), OfferModule, UserModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })

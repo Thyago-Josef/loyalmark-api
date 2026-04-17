@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { User } from '@/user/entities/user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 @Entity('offers')
 export class Offer {
@@ -34,4 +35,11 @@ export class Offer {
 
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date;
+
+    @ManyToOne(() => User, (user) => user.offers)
+    @JoinColumn({ name: 'creator_id' })
+    creator!: User;
+
+    @Column({ name: 'creator_id' })
+    creatorId!: string;
 }

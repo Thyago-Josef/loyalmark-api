@@ -1,22 +1,3 @@
-// import { Test, TestingModule } from '@nestjs/testing';
-// import { OfferService } from './offer.service';
-
-// describe('OfferService', () => {
-//   let service: OfferService;
-
-//   beforeEach(async () => {
-//     const module: TestingModule = await Test.createTestingModule({
-//       providers: [OfferService],
-//     }).compile();
-
-//     service = module.get<OfferService>(OfferService);
-//   });
-
-//   it('should be defined', () => {
-//     expect(service).toBeDefined();
-//   });
-// });
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { OfferService } from './offer.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -30,7 +11,7 @@ describe('OfferService', () => {
       providers: [
         OfferService,
         {
-          // 🛡️ Precisamos dizer ao Nest o que usar no lugar do banco de dados real
+          //Precisamos dizer ao Nest o que usar no lugar do banco de dados real
           provide: getRepositoryToken(Offer),
           useValue: {
             save: jest.fn(),

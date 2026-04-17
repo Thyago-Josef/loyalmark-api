@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsDateString, IsBoolean, Min, MinLength } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsBoolean, Min, MinLength, IsUUID } from 'class-validator';
 
 export class CreateOfferDto {
     @ApiProperty({ description: 'Título da oferta comercial', example: 'Hambúrguer Artesanal 20% OFF' })
@@ -29,4 +29,12 @@ export class CreateOfferDto {
     @ApiProperty({ description: 'Define se a oferta é apenas para clientes VIP', example: false })
     @IsBoolean()
     isPremium!: boolean;
+
+    @ApiProperty({
+        description: 'ID do usuário que está criando a oferta',
+        example: '550e8400-e29b-41d4-a716-446655440000'
+    })
+    @IsUUID() // Garante que o ID enviado tem o formato correto de UUID
+    creatorId!: string;
+
 }
