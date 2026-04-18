@@ -1,7 +1,9 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards } from '@nestjs/common';
 import { OfferService } from './offer.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('offers') // A URL será http://localhost:3000/offers
 export class OfferController {
   constructor(private readonly offerService: OfferService) { }
