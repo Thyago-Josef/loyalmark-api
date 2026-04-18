@@ -36,4 +36,17 @@ export class CreateUserDto {
     })
     @IsEnum(UserRole)
     role!: UserRole;
+
+
+    @ApiProperty({
+        description: 'ID da empresa à qual o usuário pertence',
+        example: 'uuid-da-empresa-123',
+        required: false // Opcional se for um CUSTOMER comum, obrigatório para MERCHANT
+    })
+    @IsString()
+    @IsNotEmpty({ message: 'O ID da empresa é obrigatório para este tipo de usuário' })
+    companyId!: string;
+
+
+
 }

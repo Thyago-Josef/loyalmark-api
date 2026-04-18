@@ -10,22 +10,29 @@ export class AuthService {
     private jwtService: JwtService,
   ) { }
 
-  async signIn(email: string, pass: string): Promise<any> {
+  async signIn(email: string, pass: string): Promise<{ access_token: string }> {
+    // 1. Busca o usuário pelo email
     const user = await this.userService.findOneByEmail(email);
 
-    // 🛡️ Validação de segurança: se não achar o user, já para aqui
+    // 2. Validação: se o usuário não existir ou a senha não bater
     if (!user) {
-      throw new UnauthorizedException('E-mail ou senha inválidos');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // Agora o TS sabe que o 'user' NÃO é nulo abaixo desta linha
     const isMatch = await bcrypt.compare(pass, user.password);
 
     if (!isMatch) {
-      throw new UnauthorizedException('E-mail ou senha inválidos');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    // 3. Montagem do Payload do "Mestre" ou "Lojista"
+    // O companyId aqui é o que garante o Multi-tenancy que configuramos
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId
+    };
 
     return {
       access_token: await this.jwtService.signAsync(payload),

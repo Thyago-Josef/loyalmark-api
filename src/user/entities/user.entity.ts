@@ -7,6 +7,8 @@ export enum UserRole {
     CUSTOMER = 'customer',
 }
 
+// src/user/entities/user.entity.ts
+
 @Entity('users')
 export class User {
     @PrimaryGeneratedColumn('uuid')
@@ -15,7 +17,7 @@ export class User {
     @Column({ unique: true, nullable: false })
     email!: string;
 
-    @Column({ select: false }) // O password não virá em buscas simples por segurança
+    @Column({ select: false })
     password!: string;
 
     @Column()
@@ -28,7 +30,11 @@ export class User {
     })
     role!: UserRole;
 
-    // Relacionamento: Um lojista pode ter várias ofertas
+    // 💡 A CHAVE DO MULTI-TENANCY:
+    // Identifica a qual empresa este usuário pertence.
+    @Column({ nullable: true }) // Pode ser nullable se o ADMIN não pertencer a uma empresa
+    companyId!: string;
+
     @OneToMany(() => Offer, (offer) => offer.creator)
     offers!: Offer[];
 

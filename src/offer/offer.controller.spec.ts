@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OfferController } from './offer.controller';
 import { OfferService } from './offer.service';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Offer } from './entities/offer.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-// import { describe, beforeEach, it } from 'node:test';
 
 
 
