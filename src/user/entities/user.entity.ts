@@ -1,13 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+// src/user/entities/user.entity.ts
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm'; // 👈 Importe TUDO do 'typeorm' puro
 import { Offer } from '../../offer/entities/offer.entity';
+import { Company } from '@/company/entities/company.entity';
 
 export enum UserRole {
     ADMIN = 'admin',
     MERCHANT = 'merchant',
     CUSTOMER = 'customer',
 }
-
-// src/user/entities/user.entity.ts
 
 @Entity('users')
 export class User {
@@ -30,13 +30,16 @@ export class User {
     })
     role!: UserRole;
 
-    // 💡 A CHAVE DO MULTI-TENANCY:
-    // Identifica a qual empresa este usuário pertence.
-    @Column({ nullable: true }) // Pode ser nullable se o ADMIN não pertencer a uma empresa
-    companyId!: string;
-
+    // Ajustamos para apontar para 'creator' como está na Offer
     @OneToMany(() => Offer, (offer) => offer.creator)
     offers!: Offer[];
+
+    @ManyToOne(() => Company, (company) => company.users)
+    @JoinColumn({ name: 'companyId' })
+    company!: Company;
+
+    @Column({ nullable: true })
+    companyId!: string;
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;

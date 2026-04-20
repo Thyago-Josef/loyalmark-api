@@ -1,3 +1,4 @@
+import { Company } from '@/company/entities/company.entity';
 import { User } from '../../user/entities/user.entity';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
@@ -27,6 +28,11 @@ export class Offer {
     @Column({ default: false })
     isPremium!: boolean;
 
+    @ManyToOne(() => Company, (company) => company.offers)
+    @JoinColumn({ name: 'companyId' })
+    company!: Company;
+
+    // 2. A Coluna Física (O que você já deve ter aí)
     @Column()
     companyId!: string;
 
