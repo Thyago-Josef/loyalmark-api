@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { DeepPartial, Repository } from 'typeorm';
+import { User, UserRole } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { QueryScope } from '../common/decorator/get-scope.decorator';
 
@@ -14,20 +14,31 @@ export class UserService {
     private userRepository: Repository<User>,
   ) { }
 
-  async create(createUserDto: CreateUserDto, companyId: string) {
+  async create(createUserDto: CreateUserDto, companyId?: string) {
     const { password, ...userData } = createUserDto;
+
+    // 1. A Trava de Segurança
+    const isMasterAdmin = createUserDto.role === UserRole.ADMIN;
+    if (!isMasterAdmin && !companyId) {
+      throw new BadRequestException('Usuários não-admin devem pertencer a uma empresa.');
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = this.userRepository.create({
+    // 2. Montando o objeto com tipagem explícita para evitar erros de Overload
+    const userPayload: DeepPartial<User> = {
       ...userData,
       password: hashedPassword,
-      company: { id: companyId },
-    });
+      // Se não for admin, passamos o objeto da empresa. 
+      // Se for admin, deixamos undefined (o TypeORM salvará NULL no banco)
+      company: !isMasterAdmin ? { id: companyId } : undefined,
+      companyId: !isMasterAdmin ? companyId : undefined,
+    };
 
+    const newUser = this.userRepository.create(userPayload);
     return await this.userRepository.save(newUser);
   }
-
   async findAll(scope: QueryScope) {
     return await this.userRepository.find({
       where: scope, // Filtra por companyId ou nada (se Admin)

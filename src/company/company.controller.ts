@@ -28,8 +28,8 @@ export class CompanyController {
   constructor(private readonly companyService: CompanyService) { }
 
   @Post()
-  @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Cadastrar nova empresa',
     description: 'Apenas o Administrador Master pode criar novas empresas no sistema.'
@@ -42,6 +42,8 @@ export class CompanyController {
   }
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Listar empresas',
     description: 'Retorna todas as empresas se for ADMIN, ou apenas a empresa do usuário logado se for MERCHANT.'
@@ -52,6 +54,8 @@ export class CompanyController {
   }
 
   @Get('my-company')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MERCHANT)
   @ApiOperation({
     summary: 'Ver dados da minha empresa',
     description: 'Retorna os dados detalhados da empresa vinculada ao usuário logado.'
@@ -63,6 +67,8 @@ export class CompanyController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Atualizar empresa',
     description: 'Atualiza os dados cadastrais da empresa. O sistema valida se o usuário logado tem permissão sobre o ID informado via parâmetro ou escopo.'
@@ -79,8 +85,8 @@ export class CompanyController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Remover empresa',
     description: 'Remove permanentemente a empresa e todos os seus dados vinculados. Ação restrita ao Administrador Master.'
@@ -93,8 +99,8 @@ export class CompanyController {
   }
 
   @Post(':id/impersonate')
-  @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Acessar como Lojista (Impersonate)',
     description: 'Gera um novo token onde o ADMIN assume o contexto de uma empresa específica para suporte.'

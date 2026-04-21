@@ -34,12 +34,12 @@ export class User {
     @OneToMany(() => Offer, (offer) => offer.creator)
     offers!: Offer[];
 
-    @ManyToOne(() => Company, (company) => company.users)
+    @ManyToOne(() => Company, (company) => company.users, { nullable: true })
     @JoinColumn({ name: 'companyId' })
-    company!: Company;
+    company?: Company; // Alterado de ! para ? e adicionado nullable no decorator
 
     @Column({ nullable: true })
-    companyId!: string;
+    companyId?: string; // Alterado de ! para ?
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
