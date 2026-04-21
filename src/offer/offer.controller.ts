@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Patch, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Patch, HttpCode, HttpStatus, Delete } from '@nestjs/common';
 import { OfferService } from './offer.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -7,48 +7,92 @@ import { User, UserRole } from '../user/entities/user.entity';
 import { UpdateOfferDto } from './dto/update-offer.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { LoginDto } from '@/auth/dto/login.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiForbiddenResponse
+} from '@nestjs/swagger';
+import { GetScope } from '../common/decorator/get-scope.decorator';
+import type { QueryScope } from '../common/decorator/get-scope.decorator';
 
 @UseGuards(JwtAuthGuard)
-@Controller('offers') // A URL será http://localhost:3000/offers
+@ApiTags('Offers')
+@ApiBearerAuth('access-token')
+@Controller('offers')
 export class OfferController {
   constructor(private readonly offerService: OfferService) { }
 
-  @Post() // 👈 Removemos o :companyId da URL. O ID vem do Token!
+  @Post()
+  @ApiOperation({
+    summary: 'Cria uma nova oferta',
+    description: 'Registra uma oferta vinculada automaticamente à empresa do usuário logado. Se for ADMIN, herda sua própria empresa ou a definida no contexto.'
+  })
+  @ApiCreatedResponse({ description: 'Oferta criada com sucesso.' })
+  @ApiBadRequestResponse({ description: 'Preço de desconto inválido ou dados da oferta incompletos.' })
   async create(
     @Body() createOfferDto: CreateOfferDto,
-    @CurrentUser() user: User
+    @CurrentUser() user: User,
+    @GetScope() scope: QueryScope
   ) {
-    // Passamos o ID do funcionário (user.id) e o ID da empresa (user.companyId)
-    // Nota: Certifique-se que seu User Entity tem o campo companyId ou que ele está no JWT
-    return this.offerService.create(createOfferDto, user.id, (user as any).companyId);
+    const companyId = scope.companyId || (user as any).companyId;
+    return this.offerService.create(createOfferDto, user.id, companyId);
   }
 
 
-
-
+  //  -------  >  criamos uma rota exclusiva para o Admin: POST /company/:id/impersonate.
 
   @Get()
-  async findAll(@CurrentUser() user: User) {
-    // Em um SaaS, o Get nunca retorna "tudo", apenas o que pertence à empresa do usuário
-    return this.offerService.findAllByCompany((user as any).companyId);
+  @ApiOperation({
+    summary: 'Lista ofertas (Multi-tenant)',
+    description: 'Retorna a lista de ofertas. O Master (ADMIN) visualiza TODAS as ofertas do sistema, enquanto Lojistas visualizam apenas as ofertas de sua própria empresa.'
+  })
+  @ApiOkResponse({ description: 'Lista de ofertas retornada com sucesso conforme o escopo de acesso.' })
+  async findAll(@GetScope() scope: QueryScope) {
+    return this.offerService.findAll(scope);
   }
 
-  @Get('admin/stats')
-  @Roles(UserRole.ADMIN) // 👈 Só você entra aqui
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async getGlobalStats() {
-    // Retorna quantas ofertas existem no total no sistema
-    return this.offerService.countAll();
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Detalhes de uma oferta',
+    description: 'Busca uma oferta específica pelo ID, respeitando o isolamento de empresa (Multi-tenant).'
+  })
+  @ApiOkResponse({ description: 'Dados da oferta retornados com sucesso.' })
+  @ApiNotFoundResponse({ description: 'Oferta não encontrada ou pertence a outra empresa.' })
+  async findOne(@Param('id') id: string, @GetScope() scope: QueryScope) {
+    return this.offerService.findOne(id, scope);
   }
 
   @Patch(':id')
+  @ApiOperation({
+    summary: 'Atualiza uma oferta',
+    description: 'Permite editar os campos de uma oferta. O sistema valida se o usuário tem permissão para editar este registro específico dentro do seu escopo.'
+  })
+  @ApiOkResponse({ description: 'Oferta atualizada com sucesso.' })
+  @ApiForbiddenResponse({ description: 'Acesso negado: você não tem permissão para editar esta oferta.' })
+  @ApiNotFoundResponse({ description: 'Oferta não localizada para atualização.' })
   async update(
     @Param('id') id: string,
-    @CurrentUser() user: User,
+    @GetScope() scope: QueryScope,
     @Body() updateOfferDto: UpdateOfferDto
   ) {
-    return this.offerService.update(id, user.companyId, updateOfferDto);
+    return this.offerService.update(id, scope, updateOfferDto);
+  }
+
+  @Get('admin/stats')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({
+    summary: 'Estatísticas Globais do Master',
+    description: 'Painel administrativo exclusivo para o dono do SaaS. Retorna a contagem total de todas as ofertas cadastradas na plataforma.'
+  })
+  @ApiOkResponse({ description: 'Estatísticas globais calculadas com sucesso.' })
+  @ApiForbiddenResponse({ description: 'Acesso negado: apenas o administrador master pode visualizar estatísticas globais.' })
+  async getGlobalStats() {
+    return this.offerService.countAll();
   }
 }

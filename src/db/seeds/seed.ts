@@ -8,11 +8,22 @@ import { User, UserRole } from '@/user/entities/user.entity';
 import { Offer } from '@/offer/entities/offer.entity';
 
 export const runSeed = async (dataSource: DataSource) => {
+    console.log('🧹 Limpando tabelas...');
+
+    // O query runner executa SQL puro. O CASCADE garante que se apagar a empresa, 
+    // as ofertas e usuários vinculados também sumam.
+    await dataSource.query('TRUNCATE TABLE companies, users, offers RESTART IDENTITY CASCADE');
+
     const companyRepository = dataSource.getRepository(Company);
     const userRepository = dataSource.getRepository(User);
     const offerRepository = dataSource.getRepository(Offer);
 
     console.log('🌱 Iniciando Seed...');
+
+    // // Limpa as tabelas na ordem inversa das relações (Offers -> Users -> Companies)
+    // await offerRepository.delete({});
+    // await userRepository.delete({});
+    // await companyRepository.delete({});
 
     // 1. Criar a Empresa Master (Tenant principal)
     const company = companyRepository.create({

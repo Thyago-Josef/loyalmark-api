@@ -17,6 +17,17 @@ async function bootstrap() {
     .setDescription('Sistema de Fidelização e Ofertas para Lojistas')
     .setVersion('1.0')
     .addTag('offers')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT', // Opcional, apenas para documentação
+        name: 'JWT',
+        description: 'Insira o token JWT',
+        in: 'header',
+      },
+      'access-token', // Este é o nome da referência de segurança
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

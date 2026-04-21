@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 describe('UserController', () => {
   let controller: UserController;
 
-  // Mockamos as funções que o UserController chama (create, findAll, etc)
   const mockUserService = {
     create: jest.fn(),
     findAll: jest.fn(),
@@ -18,10 +19,9 @@ describe('UserController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
       providers: [
-        {
-          provide: UserService,
-          useValue: mockUserService,
-        },
+        { provide: UserService, useValue: mockUserService },
+        { provide: JwtService, useValue: {} },    // Necessário para o JwtAuthGuard
+        { provide: ConfigService, useValue: { get: jest.fn() } }, // Necessário para o JwtAuthGuard
       ],
     }).compile();
 

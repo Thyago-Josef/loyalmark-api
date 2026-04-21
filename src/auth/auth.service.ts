@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
+import { UserRole } from '@/user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,25 @@ export class AuthService {
 
     return {
       access_token: await this.jwtService.signAsync(payload),
+    };
+  }
+
+
+  async generateImpersonateToken(adminId: string, targetCompanyId: string) {
+    // Buscamos os dados do Admin para garantir que o payload tenha informações reais
+    const admin = await this.userService.findOne(adminId, {}); // {} pois admin vê tudo
+
+    const payload = {
+      sub: admin.id,
+      email: admin.email, // Importante para o Front saber quem está logado
+      companyId: targetCompanyId, // A "mágica": trocamos a empresa do contexto
+      role: UserRole.ADMIN,
+      isImpersonating: true, // Flag para o Frontend ativar a "barra de aviso"
+    };
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      message: `Acesso administrativo concedido para a empresa ${targetCompanyId}`,
     };
   }
 }

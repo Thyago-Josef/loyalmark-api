@@ -1,56 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { QueryScope } from '../common/decorator/get-scope.decorator';
 
 @Injectable()
 export class UserService {
-
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) { }
 
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto, companyId: string) {
     const { password, ...userData } = createUserDto;
-
-    // O "salt" é um tempero aleatório que torna o hash impossível de descriptografar
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = this.userRepository.create({
       ...userData,
       password: hashedPassword,
+      company: { id: companyId },
     });
 
-    return this.userRepository.save(newUser);
+    return await this.userRepository.save(newUser);
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll(scope: QueryScope) {
+    return await this.userRepository.find({
+      where: scope, // Filtra por companyId ou nada (se Admin)
+      relations: ['company'],
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string, scope: QueryScope) {
+    const user = await this.userRepository.findOne({
+      where: { id, ...scope }
+    });
+
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    return user;
   }
 
   async findOneByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { email },
-      // 💡 IMPORTANTE: Se você quer validar a senha no login, 
-      // precisa forçar o TypeORM a trazer o campo password que marcamos com "select: false"
-      select: ['id', 'email', 'password', 'name', 'role'],
+      select: ['id', 'email', 'password', 'name', 'role', 'companyId'], // Adicionei companyId aqui para o JWT
     });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, scope: QueryScope, updateUserDto: UpdateUserDto) {
+    const user = await this.findOne(id, scope);
+
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
+    Object.assign(user, updateUserDto);
+    return await this.userRepository.save(user);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string, scope: QueryScope) {
+    const user = await this.findOne(id, scope);
+    return await this.userRepository.remove(user);
   }
 }
