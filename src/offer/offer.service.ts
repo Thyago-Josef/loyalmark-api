@@ -13,6 +13,17 @@ export class OfferService {
     private readonly offerRepository: Repository<Offer>,
   ) { }
 
+
+
+
+
+  private getWhereFilter(id: string | null, scope: QueryScope) {
+    const filter: any = {};
+    if (id) filter.id = id;
+    if (scope.companyId) filter.companyId = scope.companyId;
+    return filter;
+  }
+
   async create(createOfferDto: CreateOfferDto, creatorId: string, companyId: string) {
     // Validação de preço
     if (createOfferDto.discountPrice >= createOfferDto.originalPrice) {
@@ -35,18 +46,47 @@ export class OfferService {
   // Substitui o findAllByCompany e o antigo findAll
   // Se scope for {}, o TypeORM ignora o filtro e traz tudo (Modo Admin)
   // Se scope for { companyId }, o TypeORM filtra automaticamente (Modo Merchant)
+  // async findAll(scope: QueryScope) {
+  //   return await this.offerRepository.find({
+  //     where: scope,
+  //     order: { createdAt: 'DESC' },
+  //     relations: ['creator'],
+  //   });
+  // }
+
+  // async findAll(scope: QueryScope) {
+  //   // Criamos um filtro limpo
+  //   const whereFilter: any = {};
+
+  //   // Se houver companyId no scope, filtramos por ele (Multi-tenant)
+  //   // Se não houver (Admin Master sem impersonate), whereFilter fica vazio e traz tudo
+  //   if (scope.companyId) {
+  //     whereFilter.companyId = scope.companyId;
+  //   }
+
+  //   // IMPORTANTE: Não passamos o scope.userId para cá, pois Offer não tem essa coluna!
+
+  //   return await this.offerRepository.find({
+  //     where: whereFilter, // Usamos o filtro limpo, sem o userId intruso
+  //     order: { createdAt: 'DESC' },
+  //     relations: ['creator'],
+  //   });
+  // }
+
   async findAll(scope: QueryScope) {
+    const where = this.getWhereFilter(null, scope);
     return await this.offerRepository.find({
-      where: scope,
+      where,
       order: { createdAt: 'DESC' },
       relations: ['creator'],
     });
   }
 
   async findOne(id: string, scope: QueryScope) {
-    const offer = await this.offerRepository.findOne({
-      where: { id, ...scope }
-    });
+    // Aqui estava o erro! Usando o filtro limpo:
+    const where = this.getWhereFilter(id, scope);
+
+    const offer = await this.offerRepository.findOne({ where });
 
     if (!offer) {
       throw new NotFoundException('Oferta não encontrada ou acesso negado.');
@@ -54,8 +94,10 @@ export class OfferService {
     return offer;
   }
 
+
+
   async update(id: string, scope: QueryScope, updateOfferDto: UpdateOfferDto) {
-    // A segurança está no 'where: { id, ...scope }'
+    // findOne agora já usa o filtro limpo, então o update fica seguro
     const offer = await this.findOne(id, scope);
 
     if (updateOfferDto.discountPrice && updateOfferDto.originalPrice) {

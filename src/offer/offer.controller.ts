@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Patch, HttpCode, HttpStatus, Delete } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UseGuards, Patch, HttpCode, HttpStatus, Delete, BadRequestException } from '@nestjs/common';
 import { OfferService } from './offer.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,31 +22,52 @@ import type { QueryScope } from '../common/decorator/get-scope.decorator';
 
 @UseGuards(JwtAuthGuard)
 @ApiTags('Offers')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('offers')
 export class OfferController {
   constructor(private readonly offerService: OfferService) { }
 
+  // @Post()
+  // @ApiOperation({
+  //   summary: 'Cria uma nova oferta',
+  //   description: 'Registra uma oferta vinculada automaticamente à empresa do usuário logado. Se for ADMIN, herda sua própria empresa ou a definida no contexto.'
+  // })
+  // @ApiCreatedResponse({ description: 'Oferta criada com sucesso.' })
+  // @ApiBadRequestResponse({ description: 'Preço de desconto inválido ou dados da oferta incompletos.' })
+  // async create(
+  //   @Body() createOfferDto: CreateOfferDto,
+  //   @CurrentUser() user: User,
+  //   @GetScope() scope: QueryScope
+  // ) {
+  //   const companyId = scope.companyId || (user as any).companyId;
+  //   return this.offerService.create(createOfferDto, user.id, companyId);
+  // }
+
   @Post()
-  @ApiOperation({
-    summary: 'Cria uma nova oferta',
-    description: 'Registra uma oferta vinculada automaticamente à empresa do usuário logado. Se for ADMIN, herda sua própria empresa ou a definida no contexto.'
-  })
-  @ApiCreatedResponse({ description: 'Oferta criada com sucesso.' })
-  @ApiBadRequestResponse({ description: 'Preço de desconto inválido ou dados da oferta incompletos.' })
   async create(
     @Body() createOfferDto: CreateOfferDto,
     @CurrentUser() user: User,
     @GetScope() scope: QueryScope
   ) {
+    // 1. Tenta pegar o ID do escopo (Impersonate ou Merchant)
     const companyId = scope.companyId || (user as any).companyId;
+
+    // 2. Trava de segurança: Se ainda for null, o Admin esqueceu de escolher uma empresa
+    if (!companyId) {
+      throw new BadRequestException(
+        'Não é possível criar uma oferta sem uma empresa vinculada. Por favor, realize o impersonate primeiro.'
+      );
+    }
+
     return this.offerService.create(createOfferDto, user.id, companyId);
   }
 
-
   //  -------  >  criamos uma rota exclusiva para o Admin: POST /company/:id/impersonate.
 
+
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MERCHANT)
   @ApiOperation({
     summary: 'Lista ofertas (Multi-tenant)',
     description: 'Retorna a lista de ofertas. O Master (ADMIN) visualiza TODAS as ofertas do sistema, enquanto Lojistas visualizam apenas as ofertas de sua própria empresa.'
@@ -56,7 +77,10 @@ export class OfferController {
     return this.offerService.findAll(scope);
   }
 
+
   @Get(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MERCHANT)
   @ApiOperation({
     summary: 'Detalhes de uma oferta',
     description: 'Busca uma oferta específica pelo ID, respeitando o isolamento de empresa (Multi-tenant).'
@@ -68,6 +92,8 @@ export class OfferController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MERCHANT)
   @ApiOperation({
     summary: 'Atualiza uma oferta',
     description: 'Permite editar os campos de uma oferta. O sistema valida se o usuário tem permissão para editar este registro específico dentro do seu escopo.'
@@ -84,6 +110,8 @@ export class OfferController {
   }
 
   @Get('admin/stats')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CUSTOMER, UserRole.MERCHANT)
   @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
   @ApiOperation({

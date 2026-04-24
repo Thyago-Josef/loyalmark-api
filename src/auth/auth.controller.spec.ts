@@ -1,13 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthController', () => {
   let controller: AuthController;
 
-  // Criamos um mock simplificado do AuthService
   const mockAuthService = {
     signIn: jest.fn(),
+    impersonate: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -16,7 +18,17 @@ describe('AuthController', () => {
       providers: [
         {
           provide: AuthService,
-          useValue: mockAuthService, // 👈 Aqui está o segredo
+          useValue: mockAuthService,
+        },
+        // 👈 ADICIONE ESTES DOIS ABAIXO:
+        // O JwtAuthGuard precisa deles para o Controller "subir" no teste
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn() },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn() },
         },
       ],
     }).compile();

@@ -19,13 +19,14 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 import { User, UserRole } from '../user/entities/user.entity';
 import { RolesGuard } from '@/auth/roles.guard';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
+import { AuthService } from '@/auth/auth.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags('Companies')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('company')
 export class CompanyController {
-  constructor(private readonly companyService: CompanyService) { }
+  constructor(private readonly companyService: CompanyService, private readonly authService: AuthService,) { }
 
   @Post()
   @UseGuards(RolesGuard)
@@ -98,20 +99,20 @@ export class CompanyController {
     return this.companyService.remove(id);
   }
 
-  @Post(':id/impersonate')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({
-    summary: 'Acessar como Lojista (Impersonate)',
-    description: 'Gera um novo token onde o ADMIN assume o contexto de uma empresa específica para suporte.'
-  })
-  @ApiOkResponse({ description: 'Token de impersonate gerado com sucesso.' })
-  @ApiForbiddenResponse({ description: 'Apenas administradores master podem usar esta função.' })
-  async impersonate(
-    @Param('id') targetCompanyId: string,
-    @CurrentUser() admin: User
-  ) {
-    // Chamamos o service para gerar o novo token com o "corpo" da empresa alvo
-    return this.companyService.impersonate(admin.id, targetCompanyId);
-  }
+  // @Post(':id/impersonate')
+  // @UseGuards(RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  // @ApiOperation({
+  //   summary: 'Acessar como Lojista (Impersonate)',
+  //   description: 'Gera um novo token onde o ADMIN assume o contexto de uma empresa específica para suporte.'
+  // })
+  // @ApiOkResponse({ description: 'Token de impersonate gerado com sucesso.' })
+  // @ApiForbiddenResponse({ description: 'Apenas administradores master podem usar esta função.' })
+  // async impersonate(
+  //   @Param('id') targetCompanyId: string,
+  //   @CurrentUser() admin: User
+  // ) {
+  //   // Chamamos o service para gerar o novo token com o "corpo" da empresa alvo
+  //   return this.authService.impersonate(admin.id, targetCompanyId);
+  // }
 }

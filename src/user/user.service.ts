@@ -14,6 +14,23 @@ export class UserService {
     private userRepository: Repository<User>,
   ) { }
 
+
+
+  private getWhereFilter(id: string | null, scope: QueryScope) {
+    const filter: any = {};
+
+    if (id) filter.id = id;
+
+    // Se houver um companyId no escopo (Merchant ou Admin em Impersonate), filtra.
+    // Se for Admin Master puro (companyId é null), o filtro fica vazio e traz tudo.
+    if (scope.companyId) {
+      filter.companyId = scope.companyId;
+    }
+    return filter;
+  }
+
+
+
   async create(createUserDto: CreateUserDto, companyId?: string) {
     const { password, ...userData } = createUserDto;
 
@@ -40,16 +57,23 @@ export class UserService {
     return await this.userRepository.save(newUser);
   }
   async findAll(scope: QueryScope) {
+    const where = this.getWhereFilter(null, scope);
+
     return await this.userRepository.find({
-      where: scope, // Filtra por companyId ou nada (se Admin)
+      where,
       relations: ['company'],
     });
   }
 
+  async findById(id: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    return user;
+  }
   async findOne(id: string, scope: QueryScope) {
-    const user = await this.userRepository.findOne({
-      where: { id, ...scope }
-    });
+    const where = this.getWhereFilter(id, scope);
+
+    const user = await this.userRepository.findOne({ where });
 
     if (!user) throw new NotFoundException('Usuário não encontrado');
     return user;
@@ -65,17 +89,29 @@ export class UserService {
   async update(id: string, scope: QueryScope, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id, scope);
 
-    if (updateUserDto.password) {
-      const salt = await bcrypt.genSalt(10);
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
-    }
+    // Agora extraímos TUDO o que é sensível
+    const { password, companyId, role, email, ...dataToUpdate } = updateUserDto as any;
 
-    Object.assign(user, updateUserDto);
+    // OPCIONAL: Se você decidir que o e-mail também é sensível 
+    // (ex: precisa de confirmação), você o extrai acima também.
+
+    // O Object.assign agora só mexe em campos "inofensivos" como Nome.
+    Object.assign(user, dataToUpdate);
+
     return await this.userRepository.save(user);
   }
 
   async remove(id: string, scope: QueryScope) {
     const user = await this.findOne(id, scope);
     return await this.userRepository.remove(user);
+  }
+
+  // No seu service
+  async findSomething(scope: QueryScope) {
+    return this.userRepository.find({
+      where: {
+        companyId: scope.companyId, // Passe a propriedade, não o objeto scope inteiro
+      }
+    });
   }
 }

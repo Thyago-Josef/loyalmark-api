@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyController } from './company.controller';
 import { CompanyService } from './company.service';
+import { AuthService } from '../auth/auth.service'; // 1. Importe o AuthService
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
@@ -13,6 +14,11 @@ describe('CompanyController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    // impersonate saiu daqui...
+  };
+
+  // 2. Crie o mock para o AuthService
+  const mockAuthService = {
     impersonate: jest.fn(),
   };
 
@@ -21,8 +27,9 @@ describe('CompanyController', () => {
       controllers: [CompanyController],
       providers: [
         { provide: CompanyService, useValue: mockCompanyService },
-        { provide: JwtService, useValue: {} },    // Mock para o JwtAuthGuard
-        { provide: ConfigService, useValue: {} }, // Mock para o JwtAuthGuard
+        { provide: AuthService, useValue: mockAuthService }, // 3. Forneça o AuthService aqui
+        { provide: JwtService, useValue: {} },
+        { provide: ConfigService, useValue: {} },
       ],
     }).compile();
 

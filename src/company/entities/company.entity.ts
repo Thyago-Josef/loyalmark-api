@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, DeleteDateColumn } from 'typeorm';
 import { User } from '@/user/entities/user.entity'; // Lembre do seu alias @/
 import { Offer } from '@/offer/entities/offer.entity';
 
@@ -21,4 +21,7 @@ export class Company {
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
+
+    @DeleteDateColumn()
+    deletedAt: Date | undefined;
 }

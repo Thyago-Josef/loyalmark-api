@@ -7,9 +7,15 @@ import { OfferModule } from './offer/offer.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { CompanyModule } from './company/company.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // Tempo de vida em milissegundos (1 minuto)
+      limit: 10,  // Limite global de 10 requisições por minuto
+    }]),
     // 2. Configure o ConfigModule como Global
     ConfigModule.forRoot({
       isGlobal: true,
@@ -30,12 +36,20 @@ import { CompanyModule } from './company/company.module';
       }),
     }),
 
-    OfferModule,
-    UserModule,
     AuthModule,
     CompanyModule,
+    UserModule,
+    OfferModule,
+
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard, // Isso ativa a proteção em todas as rotas!
+    },
+
+  ],
 })
 export class AppModule { }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,25 +23,52 @@ import { RolesGuard } from '@/auth/roles.guard';
 
 @UseGuards(JwtAuthGuard)
 @ApiTags('Users')
-@ApiBearerAuth('access-token')
+@ApiBearerAuth()
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
+  // @Post()
+  // @ApiOperation({
+  //   summary: 'Criar usuário/funcionário',
+  //   description: 'Cria um novo usuário vinculado à empresa do criador. Se o criador for ADMIN, ele pode especificar a empresa alvo no DTO.'
+  // })
+  // @ApiCreatedResponse({ description: 'Usuário criado com sucesso.' })
+  // @ApiBadRequestResponse({ description: 'Dados inválidos ou e-mail já cadastrado.' })
+  // @ApiForbiddenResponse({ description: 'Você não tem permissão para criar usuários para esta empresa.' })
+  // async create(
+  //   @Body() createUserDto: CreateUserDto,
+  //   @CurrentUser() currentUser: User,
+  //   @GetScope() scope: QueryScope
+  // ) {
+  //   const companyId = scope.companyId || createUserDto.companyId || (currentUser as any).companyId;
+  //   return this.userService.create(createUserDto, companyId);
+  // }
+
   @Post()
-  @ApiOperation({
-    summary: 'Criar usuário/funcionário',
-    description: 'Cria um novo usuário vinculado à empresa do criador. Se o criador for ADMIN, ele pode especificar a empresa alvo no DTO.'
-  })
-  @ApiCreatedResponse({ description: 'Usuário criado com sucesso.' })
-  @ApiBadRequestResponse({ description: 'Dados inválidos ou e-mail já cadastrado.' })
-  @ApiForbiddenResponse({ description: 'Você não tem permissão para criar usuários para esta empresa.' })
   async create(
     @Body() createUserDto: CreateUserDto,
     @CurrentUser() currentUser: User,
     @GetScope() scope: QueryScope
   ) {
-    const companyId = scope.companyId || createUserDto.companyId || (currentUser as any).companyId;
+    let companyId: string;
+
+    if (currentUser.role === UserRole.ADMIN) {
+      // Se for ADMIN, ele pode escolher:
+      // 1. O ID do Impersonate (scope)
+      // 2. Ou o ID enviado manualmente no DTO
+      companyId = scope.companyId || createUserDto.companyId;
+    } else {
+      // Se NÃO for admin, ignoramos o DTO por segurança!
+      // Ele SÓ pode criar usuários para a própria empresa dele.
+      companyId = (currentUser as any).companyId;
+    }
+
+    // Trava final: se ninguém tem empresa, barramos.
+    if (!companyId && createUserDto.role !== UserRole.ADMIN) {
+      throw new BadRequestException('Não foi possível identificar a empresa para este usuário.');
+    }
+
     return this.userService.create(createUserDto, companyId);
   }
 

@@ -1,5 +1,5 @@
 import { AuthService } from './../auth/auth.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Company } from './entities/company.entity';
@@ -7,16 +7,30 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { QueryScope } from '../common/decorator/get-scope.decorator';
 
+
 @Injectable()
 export class CompanyService {
   constructor(
     @InjectRepository(Company)
-    private readonly companyRepository: Repository<Company>, private readonly authService: AuthService,
+    private readonly companyRepository: Repository<Company>, @Inject(forwardRef(() => AuthService)) private readonly authService: AuthService,
   ) { }
 
   async create(createCompanyDto: CreateCompanyDto) {
-    const company = this.companyRepository.create(createCompanyDto);
-    return await this.companyRepository.save(company);
+    const { slug } = createCompanyDto;
+
+    // 1. Verificação de duplicidade
+    const existingCompany = await this.companyRepository.findOne({
+      where: { slug }
+    });
+
+    if (existingCompany) {
+      // Se encontrar, barramos a criação com erro 409 (Conflict)
+      throw new ConflictException(`O slug "${slug}" já está em uso por outra empresa.`);
+    }
+
+    // 2. Se passou, criamos a empresa normalmente
+    const newCompany = this.companyRepository.create(createCompanyDto);
+    return await this.companyRepository.save(newCompany);
   }
 
   async findAll(scope: QueryScope) {
@@ -26,14 +40,25 @@ export class CompanyService {
   }
 
   async findOne(scope: QueryScope, idFromParam?: string) {
-    // A prioridade de busca é sempre o ID do escopo (segurança)
+    // 1. Define o ID alvo
     const targetId = scope.companyId || idFromParam;
 
-    const company = await this.companyRepository.findOne({ where: { id: targetId } });
+    // 2. Trava de segurança: Se o ID resultou em algo falso (null/undefined/vazio)
+    if (!targetId) {
+      // Se você quer que o Admin veja "Nada" em vez de erro, use 'return null'
+      // Se quiser ser rigoroso, mantenha a Exception
+      throw new NotFoundException('Nenhuma empresa selecionada ou identificada.');
+    }
+
+    // 3. Busca com a certeza de que targetId tem um valor real
+    const company = await this.companyRepository.findOne({
+      where: { id: targetId }
+    });
 
     if (!company) {
       throw new NotFoundException('Empresa não encontrada ou acesso negado.');
     }
+
     return company;
   }
 
@@ -46,21 +71,30 @@ export class CompanyService {
   }
 
   async remove(id: string) {
-    const company = await this.companyRepository.findOne({ where: { id } });
+    const company = await this.findOneRaw(id); // Garante que existe
     if (!company) throw new NotFoundException('Empresa não encontrada');
-    return await this.companyRepository.remove(company);
+
+    // O softDelete apenas preenche a coluna deletedAt
+    return await this.companyRepository.softDelete(id);
   }
 
   // Dentro do CompanyService
-  async impersonate(adminId: string, targetCompanyId: string) {
-    const company = await this.companyRepository.findOne({ where: { id: targetCompanyId } });
+  // async impersonate(adminId: string, targetCompanyId: string) {
+  //   const company = await this.companyRepository.findOne({ where: { id: targetCompanyId } });
 
-    if (!company) {
-      throw new NotFoundException('Empresa destino não encontrada.');
-    }
+  //   if (!company) {
+  //     throw new NotFoundException('Empresa destino não encontrada.');
+  //   }
 
-    // Aqui você chama o método do seu AuthService que gera o token especial
-    // O payload levará o ID do admin, mas o companyId da empresa alvo
-    return this.authService.generateImpersonateToken(adminId, targetCompanyId);
+  //   // Aqui você chama o método do seu AuthService que gera o token especial
+  //   // O payload levará o ID do admin, mas o companyId da empresa alvo
+  //   return this.authService.generateImpersonateToken(adminId, targetCompanyId);
+  // }
+
+  async findOneRaw(id: string) {
+    return await this.companyRepository.findOne({ where: { id } });
   }
+
+
+
 }

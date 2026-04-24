@@ -1,23 +1,32 @@
 // src/common/decorators/get-scope.decorator.ts
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '../../user/entities/user.entity';
 
+// No seu arquivo de tipos ou no decorator
 export interface QueryScope {
     companyId?: string;
+    userId: string;
+    role: UserRole; // <--- Mude de string para UserRole
 }
+
+
 
 export const GetScope = createParamDecorator(
     (data: unknown, ctx: ExecutionContext): QueryScope => {
         const request = ctx.switchToHttp().getRequest();
-        const user = request.user;
+        const user = request.user; // Dados vindos do seu JwtAuthGuard customizado
 
-        // Se você é Admin e NÃO está impersonando ninguém, o escopo é vazio (vê tudo)
-        // Se você é Admin mas o token tem um companyId (Impersonate), o escopo filtra aquela loja
-        if (user.role === UserRole.ADMIN && !user.companyId) {
-            return {};
+        if (!user) {
+            throw new UnauthorizedException('Usuário não autenticado');
         }
 
-        // Para Lojistas ou Admins em modo Impersonate
-        return { companyId: user.companyId };
+        // 2. SEMPRE retorne o objeto completo para satisfazer a interface QueryScope
+        return {
+            // Use o nome do campo exatamente como você colocou no payload do seu login (id ou sub)
+            userId: user.id || user.sub,
+            role: user.role as UserRole,
+            // Se não houver companyId (Admin Master), ele será undefined, o que a interface aceita
+            companyId: user.companyId || undefined,
+        };
     },
 );
