@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,9 +16,7 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
-
-
+  ) {}
 
   private getWhereFilter(id: string | null, scope: QueryScope) {
     const filter: any = {};
@@ -29,15 +31,15 @@ export class UserService {
     return filter;
   }
 
-
-
   async create(createUserDto: CreateUserDto, companyId?: string) {
     const { password, ...userData } = createUserDto;
 
     // 1. A Trava de Segurança
     const isMasterAdmin = createUserDto.role === UserRole.ADMIN;
     if (!isMasterAdmin && !companyId) {
-      throw new BadRequestException('Usuários não-admin devem pertencer a uma empresa.');
+      throw new BadRequestException(
+        'Usuários não-admin devem pertencer a uma empresa.',
+      );
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -47,7 +49,7 @@ export class UserService {
     const userPayload: DeepPartial<User> = {
       ...userData,
       password: hashedPassword,
-      // Se não for admin, passamos o objeto da empresa. 
+      // Se não for admin, passamos o objeto da empresa.
       // Se for admin, deixamos undefined (o TypeORM salvará NULL no banco)
       company: !isMasterAdmin ? { id: companyId } : undefined,
       companyId: !isMasterAdmin ? companyId : undefined,
@@ -90,9 +92,10 @@ export class UserService {
     const user = await this.findOne(id, scope);
 
     // Agora extraímos TUDO o que é sensível
-    const { password, companyId, role, email, ...dataToUpdate } = updateUserDto as any;
+    const { password, companyId, role, email, ...dataToUpdate } =
+      updateUserDto as any;
 
-    // OPCIONAL: Se você decidir que o e-mail também é sensível 
+    // OPCIONAL: Se você decidir que o e-mail também é sensível
     // (ex: precisa de confirmação), você o extrai acima também.
 
     // O Object.assign agora só mexe em campos "inofensivos" como Nome.
@@ -110,8 +113,29 @@ export class UserService {
   async findSomething(scope: QueryScope) {
     return this.userRepository.find({
       where: {
-        companyId: scope.companyId, // Passe a propriedade, não o objeto scope inteiro
-      }
+        companyId: scope.companyId,
+      },
     });
+  }
+
+  async updateMe(id: string, updateUserDto: any) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    } else {
+      delete updateUserDto.password;
+    }
+
+    delete updateUserDto.role;
+    delete updateUserDto.companyId;
+    delete updateUserDto.email;
+
+    Object.assign(user, updateUserDto);
+    return this.userRepository.save(user);
   }
 }

@@ -1,5 +1,11 @@
 import { AuthService } from './../auth/auth.service';
-import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Company } from './entities/company.entity';
@@ -7,25 +13,28 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { QueryScope } from '../common/decorator/get-scope.decorator';
 
-
 @Injectable()
 export class CompanyService {
   constructor(
     @InjectRepository(Company)
-    private readonly companyRepository: Repository<Company>, @Inject(forwardRef(() => AuthService)) private readonly authService: AuthService,
-  ) { }
+    private readonly companyRepository: Repository<Company>,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
+  ) {}
 
   async create(createCompanyDto: CreateCompanyDto) {
     const { slug } = createCompanyDto;
 
     // 1. Verificação de duplicidade
     const existingCompany = await this.companyRepository.findOne({
-      where: { slug }
+      where: { slug },
     });
 
     if (existingCompany) {
       // Se encontrar, barramos a criação com erro 409 (Conflict)
-      throw new ConflictException(`O slug "${slug}" já está em uso por outra empresa.`);
+      throw new ConflictException(
+        `O slug "${slug}" já está em uso por outra empresa.`,
+      );
     }
 
     // 2. Se passou, criamos a empresa normalmente
@@ -47,12 +56,14 @@ export class CompanyService {
     if (!targetId) {
       // Se você quer que o Admin veja "Nada" em vez de erro, use 'return null'
       // Se quiser ser rigoroso, mantenha a Exception
-      throw new NotFoundException('Nenhuma empresa selecionada ou identificada.');
+      throw new NotFoundException(
+        'Nenhuma empresa selecionada ou identificada.',
+      );
     }
 
     // 3. Busca com a certeza de que targetId tem um valor real
     const company = await this.companyRepository.findOne({
-      where: { id: targetId }
+      where: { id: targetId },
     });
 
     if (!company) {
@@ -62,7 +73,11 @@ export class CompanyService {
     return company;
   }
 
-  async update(id: string, scope: QueryScope, updateCompanyDto: UpdateCompanyDto) {
+  async update(
+    id: string,
+    scope: QueryScope,
+    updateCompanyDto: UpdateCompanyDto,
+  ) {
     // Busca garantindo que o usuário tem acesso a esse ID
     const company = await this.findOne(scope, id);
 
@@ -95,6 +110,11 @@ export class CompanyService {
     return await this.companyRepository.findOne({ where: { id } });
   }
 
-
-
+  async findById(id: string) {
+    const company = await this.companyRepository.findOne({ where: { id } });
+    if (!company) {
+      throw new NotFoundException('Empresa não encontrada.');
+    }
+    return company;
+  }
 }

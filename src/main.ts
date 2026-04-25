@@ -43,11 +43,13 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document); // Ocupará a rota http://localhost:3000/api
 
   // Ativa a validação automática em todos os endpoints
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,            // Remove campos que não estão no DTO
-    forbidNonWhitelisted: true, // Erro se enviarem campos "estranhos"
-    transform: true,            // Converte tipos automaticamente
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Remove campos que não estão no DTO
+      forbidNonWhitelisted: true, // Erro se enviarem campos "estranhos"
+      transform: true, // Converte tipos automaticamente
+    }),
+  );
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`🚀 Application is running on: ${await app.getUrl()}`);

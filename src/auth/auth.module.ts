@@ -23,4 +23,4 @@ import { CompanyModule } from '../company/company.module'; // 👈 CORRIGIDO: Ap
   providers: [AuthService],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

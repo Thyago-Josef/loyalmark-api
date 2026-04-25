@@ -20,7 +20,7 @@ describe('UserController', () => {
       controllers: [UserController],
       providers: [
         { provide: UserService, useValue: mockUserService },
-        { provide: JwtService, useValue: {} },    // Necessário para o JwtAuthGuard
+        { provide: JwtService, useValue: {} }, // Necessário para o JwtAuthGuard
         { provide: ConfigService, useValue: { get: jest.fn() } }, // Necessário para o JwtAuthGuard
       ],
     }).compile();

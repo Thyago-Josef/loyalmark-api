@@ -1,4 +1,12 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { LoginDto } from './dto/login.dto';
@@ -11,17 +19,11 @@ import type { QueryScope } from '@/common/decorator/get-scope.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from './decorators/public.decorator';
 
-
-
-
-
 @ApiTags('auth')
 @ApiBearerAuth() // 👈 ESSENCIAL: Adicione aqui para habilitar o cadeado no Swagger
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
-
-
+  constructor(private authService: AuthService) {}
 
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -39,7 +41,7 @@ export class AuthController {
   // O @ApiBearerAuth() aqui em cima é opcional se já estiver no topo da classe
   async impersonate(
     @GetScope() scope: QueryScope,
-    @Param('companyId') targetCompanyId: string
+    @Param('companyId') targetCompanyId: string,
   ) {
     return this.authService.impersonate(scope.userId, targetCompanyId);
   }
@@ -51,7 +53,6 @@ export class AuthController {
 // export class AuthController {
 //   constructor(private authService: AuthService) { }
 
-
 //   @HttpCode(HttpStatus.OK)
 //   @ApiOperation({ summary: 'Realiza o login e retorna o token JWT' })
 //   @Throttle({ default: { limit: 5, ttl: 60000 } }) // Limite de segurança
@@ -59,7 +60,6 @@ export class AuthController {
 //   async signIn(@Body() loginDto: LoginDto) {
 //     return this.authService.signIn(loginDto.email, loginDto.password);
 //   }
-
 
 //   // src/auth/auth.controller.ts
 
@@ -74,12 +74,3 @@ export class AuthController {
 //     // O adminId vem do token atual do Admin
 //     return this.authService.impersonate(scope.userId, targetCompanyId);
 //   }
-
-
-
-
-
-
-
-
-

@@ -1,49 +1,61 @@
 // src/user/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm'; // 👈 Importe TUDO do 'typeorm' puro
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Offer } from '../../offer/entities/offer.entity';
 import { Company } from '@/company/entities/company.entity';
+import { UserCompany } from '@/client/entities/user-company.entity';
 
 export enum UserRole {
-    ADMIN = 'admin',
-    MERCHANT = 'merchant',
-    CUSTOMER = 'customer',
+  ADMIN = 'admin',
+  MERCHANT = 'merchant',
+  CUSTOMER = 'customer',
 }
 
 @Entity('users')
 export class User {
-    @PrimaryGeneratedColumn('uuid')
-    id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
-    @Column({ unique: true, nullable: false })
-    email!: string;
+  @Column({ unique: true, nullable: false })
+  email!: string;
 
-    @Column({ select: false })
-    password!: string;
+  @Column({ select: false })
+  password!: string;
 
-    @Column()
-    name!: string;
+  @Column()
+  name!: string;
 
-    @Column({
-        type: 'enum',
-        enum: UserRole,
-        default: UserRole.CUSTOMER,
-    })
-    role!: UserRole;
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CUSTOMER,
+  })
+  role!: UserRole;
 
-    // Ajustamos para apontar para 'creator' como está na Offer
-    @OneToMany(() => Offer, (offer) => offer.creator)
-    offers!: Offer[];
+  @OneToMany(() => Offer, (offer) => offer.creator)
+  offers!: Offer[];
 
-    @ManyToOne(() => Company, (company) => company.users, { nullable: true })
-    @JoinColumn({ name: 'companyId' })
-    company?: Company; // Alterado de ! para ? e adicionado nullable no decorator
+  @OneToMany(() => UserCompany, (uc) => uc.user)
+  userCompanies!: UserCompany[];
 
-    @Column({ nullable: true })
-    companyId?: string; // Alterado de ! para ?
+  @ManyToOne(() => Company, (company) => company.users, { nullable: true })
+  @JoinColumn({ name: 'companyId' })
+  company?: Company;
 
-    @CreateDateColumn({ name: 'created_at' })
-    createdAt!: Date;
+  @Column({ nullable: true })
+  companyId?: string;
 
-    @UpdateDateColumn({ name: 'updated_at' })
-    updatedAt!: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Offer } from './entities/offer.entity';
@@ -11,11 +16,7 @@ export class OfferService {
   constructor(
     @InjectRepository(Offer)
     private readonly offerRepository: Repository<Offer>,
-  ) { }
-
-
-
-
+  ) {}
 
   private getWhereFilter(id: string | null, scope: QueryScope) {
     const filter: any = {};
@@ -24,22 +25,29 @@ export class OfferService {
     return filter;
   }
 
-  async create(createOfferDto: CreateOfferDto, creatorId: string, companyId: string) {
-    // Validação de preço
+  async create(
+    createOfferDto: CreateOfferDto,
+    creatorId: string,
+    companyId: string,
+  ) {
     if (createOfferDto.discountPrice >= createOfferDto.originalPrice) {
-      throw new BadRequestException('O preço com desconto deve ser menor que o preço original.');
+      throw new BadRequestException(
+        'O preço com desconto deve ser menor que o preço original.',
+      );
     }
 
     const newOffer = this.offerRepository.create({
       ...createOfferDto,
-      creator: { id: creatorId },
-      companyId: companyId, // Aqui usamos o companyId resolvido pelo controller/scope
+      creatorId: creatorId,
+      companyId: companyId,
     });
 
     try {
       return await this.offerRepository.save(newOffer);
     } catch (error) {
-      throw new InternalServerErrorException('Erro ao salvar no banco de dados.');
+      throw new InternalServerErrorException(
+        'Erro ao salvar no banco de dados.',
+      );
     }
   }
 
@@ -94,15 +102,15 @@ export class OfferService {
     return offer;
   }
 
-
-
   async update(id: string, scope: QueryScope, updateOfferDto: UpdateOfferDto) {
     // findOne agora já usa o filtro limpo, então o update fica seguro
     const offer = await this.findOne(id, scope);
 
     if (updateOfferDto.discountPrice && updateOfferDto.originalPrice) {
       if (updateOfferDto.discountPrice >= updateOfferDto.originalPrice) {
-        throw new BadRequestException('O desconto deve ser menor que o preço original.');
+        throw new BadRequestException(
+          'O desconto deve ser menor que o preço original.',
+        );
       }
     }
 
@@ -119,7 +127,39 @@ export class OfferService {
     const total = await this.offerRepository.count();
     return {
       totalOffers: total,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
+  }
+
+  async findAllPublic() {
+    return await this.offerRepository.find({
+      order: { createdAt: 'DESC' },
+      relations: ['creator', 'company'],
+    });
+  }
+
+  async findAllForCompany(companyId: string) {
+    return await this.offerRepository.find({
+      where: { companyId },
+      order: { createdAt: 'DESC' },
+      relations: ['creator'],
+    });
+  }
+
+  async findAllForCompanies(companyIds: string[]) {
+    if (companyIds.length === 0) {
+      return [];
+    }
+    return await this.offerRepository
+      .createQueryBuilder('offer')
+      .where('offer.companyId IN (:...companyIds)', { companyIds })
+      .orderBy('offer.createdAt', 'DESC')
+      .leftJoinAndSelect('offer.company', 'company')
+      .leftJoinAndSelect('offer.creator', 'creator')
+      .getMany();
+  }
+
+  async getPublicOffers() {
+    return this.findAllPublic();
   }
 }

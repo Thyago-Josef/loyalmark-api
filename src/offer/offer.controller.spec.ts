@@ -3,8 +3,6 @@ import { OfferController } from './offer.controller';
 import { OfferService } from './offer.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-
-
 describe('OfferController', () => {
   let controller: OfferController;
 

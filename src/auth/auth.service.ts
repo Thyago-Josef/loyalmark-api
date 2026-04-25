@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, UnauthorizedException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  ForbiddenException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { UserRole } from '@/user/entities/user.entity';
 import { CompanyService } from '@/company/company.service';
-
-
 
 @Injectable()
 export class AuthService {
@@ -14,7 +19,7 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject(forwardRef(() => CompanyService))
     private companyService: CompanyService,
-  ) { }
+  ) {}
 
   async signIn(email: string, pass: string): Promise<{ access_token: string }> {
     // 1. Busca o usuário pelo email
@@ -37,15 +42,13 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
-      companyId: user.role === 'admin' ? null : user.companyId
+      companyId: user.role === 'admin' ? null : user.companyId,
     };
 
     return {
       access_token: await this.jwtService.signAsync(payload),
     };
   }
-
-
 
   async impersonate(adminId: string, targetCompanyId: string) {
     // 1. Validar se a empresa alvo existe no banco
@@ -58,7 +61,9 @@ export class AuthService {
     // Usamos findById que criamos para ignorar filtros de escopo
     const admin = await this.userService.findById(adminId);
     if (admin.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Apenas administradores master podem realizar esta ação.');
+      throw new ForbiddenException(
+        'Apenas administradores master podem realizar esta ação.',
+      );
     }
 
     // 3. Montagem do Payload "Disfarçado"
@@ -67,7 +72,7 @@ export class AuthService {
       email: admin.email,
       role: admin.role,
       companyId: targetCompanyId, // Aqui injetamos o ID da empresa alvo
-      isImpersonating: true,       // Para o Front-end saber que deve mostrar um aviso
+      isImpersonating: true, // Para o Front-end saber que deve mostrar um aviso
     };
 
     // 4. Retorno padronizado
@@ -77,9 +82,6 @@ export class AuthService {
     };
   }
 }
-
-
-
 
 //   async generateImpersonateToken(adminId: string, targetCompanyId: string) {
 //     // Buscamos os dados do Admin para garantir que o payload tenha informações reais
@@ -100,7 +102,6 @@ export class AuthService {
 //       message: `Acesso administrativo concedido para a empresa ${targetCompanyId}`,
 //     };
 //   }
-
 
 //   async impersonate(adminId: string, targetCompanyId: string) {
 //     // 1. Validar se a empresa alvo existe
